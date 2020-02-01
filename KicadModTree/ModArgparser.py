@@ -15,8 +15,13 @@
 
 import sys
 import argparse
-import yaml
 import csv
+
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
 
 
 class ParserException(Exception):
@@ -25,14 +30,82 @@ class ParserException(Exception):
 
 
 class ModArgparser(object):
+    r"""A general data loading class, which allows us to specify parts using .yml or .csv files.
+
+    Using this class allows us to seperate between the implementation of a footprint generator, and the data which
+    represents a single footprint. To do so, we need to define which parameters are expected in those data-files.
+
+    To improve the usablity of this class, it is able to do type checks of provided parameters, as well as defining
+    default values and do a simple check if a parameter can be considered as required or optional.
+
+    :param footprint_function:
+        A function which is called for every footprint we want to generate
+    :type footprint_function: ``function reference``
+
+    :Example:
+
+    >>> from KicadModTree import *
+    >>> def footprint_gen(args):
+    ...    print("create footprint: {}".format(args['name']))
+    ...
+    >>> parser = ModArgparser(footprint_gen)
+    >>> parser.add_parameter("name", type=str, required=True)  # the root node of .yml files is parsed as name
+    >>> parser.add_parameter("datasheet", type=str, required=False)
+    >>> parser.add_parameter("courtyard", type=float, required=False, default=0.25)
+    >>> parser.add_parameter("pincount", type=int, required=True)
+    >>> parser.run()  # now run our script which handles the whole part of parsing the files
+    """
+
     def __init__(self, footprint_function):
         self._footprint_function = footprint_function
         self._params = {}
 
     def add_parameter(self, name, **kwargs):
+        r"""Add a parameter to the ModArgparser
+
+        :param name:
+            name of the argument
+        :param \**kwargs:
+            See below
+        :type name: ``str``
+
+        :Keyword Arguments:
+            * *type* (``type``) --
+              type of the argument
+            * *required* (``bool``) --
+              is the argument required or optional
+            * *default* --
+              a default value which is used when there is no value defined
+
+        :Example:
+
+        >>> from KicadModTree import *
+        >>> def footprint_gen(args):
+        ...    print("create footprint: {}".format(args['name']))
+        ...
+        >>> parser = ModArgparser(footprint_gen)
+        >>> parser.add_parameter("name", type=str, required=True)  # the root node of .yml files is parsed as name
+        >>> parser.add_parameter("datasheet", type=str, required=False)
+        >>> parser.add_parameter("courtyard", type=float, required=False, default=0.25)
+        """
+
         self._params[name] = kwargs
 
     def run(self):
+        r"""Execute the ModArgparser and run all tasks defined via the commandline arguments of this script
+
+        This method parses the commandline arguments to determine which actions to take. Beside of parsing .yml and .csv
+        files, it also allows us to output example files.
+
+        >>> from KicadModTree import *
+        >>> def footprint_gen(args):
+        ...    print("create footprint: {}".format(args['name']))
+        ...
+        >>> parser = ModArgparser(footprint_gen)
+        >>> parser.add_parameter("name", type=str, required=True)  # the root node of .yml files is parsed as name
+        >>> parser.run()  # now run our script which handles the whole part of parsing the files
+        """
+
         parser = argparse.ArgumentParser(description='Parse footprint defintion file(s) and create matching footprints')
         parser.add_argument('files', metavar='file', type=str, nargs='*', help='.yml or .csv files which contains data')
         parser.add_argument('-v', '--verbose', help='show some additional information', action='store_true')  # TODO
@@ -65,9 +138,13 @@ class ModArgparser(object):
                 print("unexpected filetype: {0}".format(filepath))
 
     def _parse_and_execute_yml(self, filepath):
+        if not YAML_AVAILABLE:
+            print("pyyaml not available!")
+            sys.exit(1)
+
         with open(filepath, 'r') as stream:
             try:
-                parsed = yaml.load(stream)  # parse file
+                parsed = yaml.safe_load(stream)  # parse file
 
                 if parsed is None:
                     print("empty file!")
@@ -122,6 +199,10 @@ class ModArgparser(object):
             return "??"
 
     def _print_example_yml(self):
+        if not YAML_AVAILABLE:
+            print("pyyaml not available!")
+            sys.exit(1)
+
         data = {'footprint_required': self._create_example_data_required(),
                 'footprint_full': self._create_example_data_full()}
         print(yaml.dump(data, default_flow_style=False))

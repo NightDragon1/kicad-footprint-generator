@@ -21,6 +21,7 @@ KicadModTree.KicadFileHandler module
 .. automodule:: KicadModTree.KicadFileHandler
     :members:
     :undoc-members:
+    :inherited-members:
     :show-inheritance:
 
 KicadModTree.ModArgparser module
@@ -31,11 +32,12 @@ KicadModTree.ModArgparser module
     :undoc-members:
     :show-inheritance:
 
-KicadModTree.Point module
+KicadModTree.Vector module
 -------------------------
 
-.. automodule:: KicadModTree.Point
+.. automodule:: KicadModTree.Vector
     :members:
     :undoc-members:
+    :special-members:
     :show-inheritance:
 
